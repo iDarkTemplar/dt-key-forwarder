@@ -37,26 +37,26 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set (CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 endif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
-find_package ( X11 COMPONENTS X11_Xinput X11_Xkblib REQUIRED )
+find_package ( X11 COMPONENTS X11_Xinput X11_Xkblib X11_XTest REQUIRED )
 
-include_directories( ${X11_Xinput_INCLUDE_PATH} ${X11_Xkblib_INCLUDE_PATH} )
+include_directories( ${X11_Xinput_INCLUDE_PATH} ${X11_Xkblib_INCLUDE_PATH} ${X11_XTest_INCLUDE_PATH} )
 
 add_definitions(-D_FILE_OFFSET_BITS=64)
 
 set ( CLIENT_SOURCES client/main.cpp )
 set ( CLIENT_HEADERS )
-set ( CLIENT_LIBS ${X11_LIBRARIES} ${X11_Xinput_LIB} )
+set ( CLIENT_LIBS ${X11_X11_LIB} ${X11_Xinput_LIB} )
 
 set ( SERVER_SOURCES server/main.cpp )
 set ( SERVER_HEADERS )
-set ( SERVER_LIBS )
+set ( SERVER_LIBS ${X11_X11_LIB} ${X11_XTest_LIB})
 
 add_executable( dt-key-forwarder-client ${CLIENT_SOURCES} ${CLIENT_HEADERS})
 target_link_libraries( dt-key-forwarder-client ${CLIENT_LIBS} )
 
-#add_executable( dt-key-forwarder-server ${SERVER_SOURCES} ${SERVER_HEADERS})
-#target_link_libraries( dt-key-forwarder-server ${SERVER_LIBS} )
+add_executable( dt-key-forwarder-server ${SERVER_SOURCES} ${SERVER_HEADERS})
+target_link_libraries( dt-key-forwarder-server ${SERVER_LIBS} )
 
 # installation config
 install(TARGETS dt-key-forwarder-client RUNTIME DESTINATION ./bin)
-#install(TARGETS dt-key-forwarder-server RUNTIME DESTINATION ./bin)
+install(TARGETS dt-key-forwarder-server RUNTIME DESTINATION ./bin)

@@ -28,7 +28,6 @@
 #include <signal.h>
 
 #include <stdio.h>
-#include <unistd.h>
 
 static volatile int run = 1;
 
