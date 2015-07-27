@@ -35,6 +35,7 @@
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include <stdio.h>
 
@@ -105,6 +106,7 @@ int main(int argc, char **argv)
 
 	struct sockaddr_un sockaddr;
 	int socket_fd;
+	struct pollfd pollfds;
 
 	for (index = 1; index < argc; ++index)
 	{
@@ -235,39 +237,56 @@ int main(int argc, char **argv)
 
 	while (run)
 	{
-		XNextEvent(dpy, (XEvent*)&ev);
-
-		if ((XGetEventData(dpy, cookie))
-		    && (cookie->type == GenericEvent)
-		    && (cookie->extension == xi_opcode))
+		if (XPending(dpy) > 0)
 		{
-			switch (cookie->evtype)
+			XNextEvent(dpy, (XEvent*)&ev);
+
+			if ((XGetEventData(dpy, cookie))
+				&& (cookie->type == GenericEvent)
+				&& (cookie->extension == xi_opcode))
 			{
-			case XI_KeyPress:
-			case XI_KeyRelease:
-				device_event = (XIDeviceEvent*) cookie->data;
-				keysym = XkbKeycodeToKeysym(dpy, device_event->detail, 0, 0);
-
-				for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
+				switch (cookie->evtype)
 				{
-					if (keysym == grab_keys[i].keysym)
+				case XI_KeyPress:
+				case XI_KeyRelease:
+					device_event = (XIDeviceEvent*) cookie->data;
+					keysym = XkbKeycodeToKeysym(dpy, device_event->detail, 0, 0);
+
+					for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
 					{
-						break;
+						if (keysym == grab_keys[i].keysym)
+						{
+							break;
+						}
 					}
-				}
 
-				if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
-				{
-					dprintf(socket_fd, "%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
-				}
-				break;
+					if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
+					{
+						dprintf(socket_fd, "%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
+					}
+					break;
 
-			default:
-				break;
+				default:
+					break;
+				}
+			}
+
+			XFreeEventData(dpy, cookie);
+		}
+		else
+		{
+			pollfds.fd = socket_fd;
+			pollfds.events = POLLIN;
+			pollfds.revents = 0;
+
+			// sleep 10ms and check if server quit
+			index = poll(&pollfds, 1, 10);
+
+			if ((pollfds.revents & POLLHUP) || (pollfds.revents & POLLERR) || (pollfds.revents & POLLNVAL))
+			{
+				run = 0;
 			}
 		}
-
-		XFreeEventData(dpy, cookie);
 	}
 
 error_3:
