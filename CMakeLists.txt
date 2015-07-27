@@ -18,6 +18,16 @@ set(CPACK_SOURCE_PACKAGE_FILE_NAME "${CMAKE_PROJECT_NAME}-${DKF_VERSION}")
 # MUST be after CPACK_* variables.
 include(CPack)
 
+if (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+	set (OS_LINUX true)
+	add_definitions(-DOS_Linux)
+endif (${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+
+if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+	set (OS_FREEBSD true)
+	add_definitions(-DOS_FreeBSD)
+endif (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
+
 # installation directory configuration
 set(INST_PREFIX "/usr" CACHE PATH "Prefix prepended to install directories")
 set(CMAKE_INSTALL_PREFIX "${INST_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
@@ -37,19 +47,22 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 	set (CMAKE_CXX_FLAGS_RELEASE ${CMAKE_C_FLAGS_RELEASE})
 endif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
+find_package ( DtCommand REQUIRED )
 find_package ( X11 COMPONENTS X11_Xinput X11_Xkblib X11_XTest REQUIRED )
 
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
+include_directories( ${DT_CMD_INCLUDE_DIRS} )
 include_directories( ${X11_Xinput_INCLUDE_PATH} ${X11_Xkblib_INCLUDE_PATH} ${X11_XTest_INCLUDE_PATH} )
 
 add_definitions(-D_FILE_OFFSET_BITS=64)
 
-set ( CLIENT_SOURCES client/main.cpp )
-set ( CLIENT_HEADERS )
+set ( CLIENT_SOURCES client/main.c )
+set ( CLIENT_HEADERS common/commands.h )
 set ( CLIENT_LIBS ${X11_X11_LIB} ${X11_Xinput_LIB} )
 
-set ( SERVER_SOURCES server/main.cpp )
-set ( SERVER_HEADERS )
-set ( SERVER_LIBS ${X11_X11_LIB} ${X11_XTest_LIB})
+set ( SERVER_SOURCES server/main.c )
+set ( SERVER_HEADERS common/commands.h )
+set ( SERVER_LIBS ${DT_CMD_LIBRARIES} ${X11_X11_LIB} ${X11_XTest_LIB})
 
 add_executable( dt-key-forwarder-client ${CLIENT_SOURCES} ${CLIENT_HEADERS})
 target_link_libraries( dt-key-forwarder-client ${CLIENT_LIBS} )

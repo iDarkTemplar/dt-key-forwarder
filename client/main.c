@@ -18,6 +18,12 @@
  *
  */
 
+#if (defined OS_FreeBSD)
+#define _WITH_DPRINTF
+#endif /* (defined OS_FreeBSD) */
+
+#include "common/commands.h"
+
 #include <X11/Xlib.h>
 #include <X11/XF86keysym.h>
 #include <X11/extensions/XInput.h>
@@ -32,17 +38,6 @@
 static volatile int run = 1;
 
 static int xi_opcode;
-
-static KeySym grab_keys[] = {
-	XF86XK_AudioPlay,
-	XF86XK_AudioStop,
-	XF86XK_AudioPause,
-	XF86XK_AudioNext,
-	XF86XK_AudioPrev,
-	XF86XK_AudioRaiseVolume,
-	XF86XK_AudioLowerVolume,
-	XF86XK_AudioMute
-};
 
 static void signal_handler(int signum)
 {
@@ -83,23 +78,45 @@ int main(int argc, char **argv)
 	int event, error;
 	XIEventMask event_mask;
 
+	int result = 0;
+	size_t i;
+
+	XEvent ev;
+	XGenericEventCookie *cookie;
+	XIDeviceEvent *device_event;
+	KeySym keysym;
+
 	if (setup_sig_handlers() < 0)
 	{
-		return 0;
+		fprintf(stderr, "Failed to setup sighandlers\n");
+		result = -1;
+		goto error_1;
+	}
+
+	for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
+	{
+		grab_keys[i].string = XKeysymToString(grab_keys[i].keysym);
+		if (grab_keys[i].string == NULL)
+		{
+			fprintf(stderr, "Failed to convert keysym %lux to string\n", grab_keys[i].keysym);
+			result = -1;
+			goto error_1;
+		}
 	}
 
 	dpy = XOpenDisplay(getenv("DISPLAY"));
 	if (dpy == NULL)
 	{
-		//PostErrorLog("createGLWindow(): open display error");
-		//goto createGLWindow_error_1;
-		return 0;
+		fprintf(stderr, "Failed to open display\n");
+		result = -1;
+		goto error_1;
 	}
 
 	if (!XQueryExtension(dpy, "XInputExtension", &xi_opcode, &event, &error))
 	{
-		//printf("X Input extension not available.\n");
-		return 0;
+		fprintf(stderr, "X Input extension not available\n");
+		result = -1;
+		goto error_2;
 	}
 
 	screen = DefaultScreen(dpy);
@@ -109,7 +126,9 @@ int main(int argc, char **argv)
 	event_mask.mask = (unsigned char*) calloc(event_mask.mask_len, sizeof(char));
 	if (event_mask.mask == NULL)
 	{
-		return 0;
+		fprintf(stderr, "Memory allocation error\n");
+		result = -1;
+		goto error_2;
 	}
 
 	XISetMask(event_mask.mask, XI_KeyPress);
@@ -120,10 +139,10 @@ int main(int argc, char **argv)
 
 	free(event_mask.mask);
 
+	cookie = (XGenericEventCookie*)&ev.xcookie;
+
 	while (run)
 	{
-		XEvent ev;
-		XGenericEventCookie *cookie = (XGenericEventCookie*)&ev.xcookie;
 		XNextEvent(dpy, (XEvent*)&ev);
 
 		if ((XGetEventData(dpy, cookie))
@@ -135,23 +154,20 @@ int main(int argc, char **argv)
 			case XI_KeyPress:
 			case XI_KeyRelease:
 				{
-					XIDeviceEvent* event = (XIDeviceEvent*) cookie->data;
-					KeySym keysym = XkbKeycodeToKeysym(dpy, event->detail, event->group.effective, event->mods.effective);
+					device_event = (XIDeviceEvent*) cookie->data;
+					keysym = XkbKeycodeToKeysym(dpy, device_event->detail, device_event->group.effective, device_event->mods.effective);
 
-					int found = 0;
-
-					for (int i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
+					for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
 					{
-						if (keysym == grab_keys[i])
+						if (keysym == grab_keys[i].keysym)
 						{
-							found = 1;
 							break;
 						}
 					}
 
-					if (found)
+					if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
 					{
-						printf("%d: key %d: %s\n", cookie->evtype, event->detail, XKeysymToString(keysym));
+						printf("%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
 					}
 				}
 				break;
@@ -164,7 +180,9 @@ int main(int argc, char **argv)
 		XFreeEventData(dpy, cookie);
 	}
 
+error_2:
 	XCloseDisplay(dpy);
 
-	return 0;
+error_1:
+	return result;
 }
