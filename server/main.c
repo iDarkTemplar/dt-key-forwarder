@@ -555,7 +555,7 @@ int main(int argc, char **argv)
 						if (key_index < sizeof(grab_keys)/sizeof(grab_keys[0]))
 						{
 							// Send a fake key event to the window.
-							XTestFakeKeyEvent(dpy, XKeysymToKeycode(dpy, grab_keys[key_index].keysym), True, CurrentTime);
+							XTestFakeKeyEvent(dpy, XKeysymToKeycode(dpy, grab_keys[key_index].keysym), key_action, CurrentTime);
 							XSync(dpy, False);
 						}
 					}
