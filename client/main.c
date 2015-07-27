@@ -32,6 +32,9 @@
 
 #include <stdlib.h>
 #include <signal.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 #include <stdio.h>
 
@@ -71,6 +74,16 @@ static int setup_sig_handlers(void)
 	return 0;
 }
 
+static void print_help(FILE *stream, const char *name)
+{
+	fprintf(stream,
+	"USAGE: %s OPTIONS\n"
+	"\twhere options are one of following:\n"
+	"\t--server [-s] -- path to server socket\n"
+	"\t--help [-h] -- show this help message\n",
+	name);
+}
+
 int main(int argc, char **argv)
 {
 	Display *dpy;
@@ -80,11 +93,71 @@ int main(int argc, char **argv)
 
 	int result = 0;
 	size_t i;
+	int index;
+	int show_help = 0;
+	int show_error = 0;
+	char *server_socket_path = NULL;
 
 	XEvent ev;
 	XGenericEventCookie *cookie;
 	XIDeviceEvent *device_event;
 	KeySym keysym;
+
+	struct sockaddr_un sockaddr;
+	int socket_fd;
+
+	for (index = 1; index < argc; ++index)
+	{
+		if (((strcmp(argv[index], "--server") == 0)
+			|| (strcmp(argv[index], "-s") == 0))
+			&& (index + 1 < argc))
+		{
+			if (server_socket_path == NULL)
+			{
+				server_socket_path = argv[++index];
+			}
+			else
+			{
+				show_error = 1;
+			}
+		}
+		else if ((strcmp(argv[index], "--help") == 0)
+			|| (strcmp(argv[index], "-h") == 0))
+		{
+			if (show_help == 0)
+			{
+				show_help = 1;
+			}
+			else
+			{
+				show_error = 1;
+			}
+		}
+		else
+		{
+			show_error = 1;
+		}
+	}
+
+	if (show_error)
+	{
+		fprintf(stderr, "Failed to parse options\n");
+		print_help(stderr, argv[0]);
+		result = -1;
+		goto error_1;
+	}
+	else if (show_help)
+	{
+		print_help(stdout, argv[0]);
+		goto error_1;
+	}
+	else if (server_socket_path == NULL)
+	{
+		fprintf(stderr, "Server socket path is not specified\n");
+		print_help(stderr, argv[0]);
+		result = -1;
+		goto error_1;
+	}
 
 	if (setup_sig_handlers() < 0)
 	{
@@ -139,6 +212,25 @@ int main(int argc, char **argv)
 
 	free(event_mask.mask);
 
+	socket_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
+	if (socket_fd < 0)
+	{
+		fprintf(stderr, "Failed to open socket\n");
+		result = -1;
+		goto error_2;
+	}
+
+	sockaddr.sun_family = AF_LOCAL;
+	memset(sockaddr.sun_path, 0, sizeof(sockaddr.sun_path));
+	strncpy(sockaddr.sun_path, server_socket_path, sizeof(sockaddr.sun_path) - 1);
+
+	if (connect(socket_fd, (struct sockaddr*) &sockaddr, sizeof(struct sockaddr_un)) < 0)
+	{
+		fprintf(stderr, "Failed to connect to server\n");
+		result = -1;
+		goto error_3;
+	}
+
 	cookie = (XGenericEventCookie*)&ev.xcookie;
 
 	while (run)
@@ -153,22 +245,20 @@ int main(int argc, char **argv)
 			{
 			case XI_KeyPress:
 			case XI_KeyRelease:
+				device_event = (XIDeviceEvent*) cookie->data;
+				keysym = XkbKeycodeToKeysym(dpy, device_event->detail, 0, 0);
+
+				for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
 				{
-					device_event = (XIDeviceEvent*) cookie->data;
-					keysym = XkbKeycodeToKeysym(dpy, device_event->detail, device_event->group.effective, device_event->mods.effective);
-
-					for (i = 0; i < sizeof(grab_keys)/sizeof(grab_keys[0]); ++i)
+					if (keysym == grab_keys[i].keysym)
 					{
-						if (keysym == grab_keys[i].keysym)
-						{
-							break;
-						}
+						break;
 					}
+				}
 
-					if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
-					{
-						printf("%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
-					}
+				if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
+				{
+					dprintf(socket_fd, "%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
 				}
 				break;
 
@@ -179,6 +269,9 @@ int main(int argc, char **argv)
 
 		XFreeEventData(dpy, cookie);
 	}
+
+error_3:
+	close(socket_fd);
 
 error_2:
 	XCloseDisplay(dpy);
