@@ -27,6 +27,7 @@
 #include <X11/XF86keysym.h>
 #include <X11/extensions/XTest.h>
 
+#include <sys/stat.h>
 #include <stdlib.h>
 #include <signal.h>
 #include <sys/socket.h>
@@ -361,6 +362,8 @@ int main(int argc, char **argv)
 		result = -1;
 		goto error_2;
 	}
+
+	umask(0);
 
 	socket_fd = socket(AF_LOCAL, SOCK_STREAM, 0);
 	if (socket_fd < 0)
