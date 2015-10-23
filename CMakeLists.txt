@@ -4,7 +4,7 @@ cmake_minimum_required( VERSION 2.8.8 )
 
 set(DKF_VERSION_MAJOR 0)
 set(DKF_VERSION_MINOR 2)
-set(DKF_VERSION_PATCH 0)
+set(DKF_VERSION_PATCH 1)
 set(DKF_VERSION "${DKF_VERSION_MAJOR}.${DKF_VERSION_MINOR}.${DKF_VERSION_PATCH}")
 
 set(CPACK_PACKAGE_VERSION_MAJOR ${DKF_VERSION_MAJOR})
@@ -29,10 +29,13 @@ if (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
 endif (${CMAKE_SYSTEM_NAME} STREQUAL "FreeBSD")
 
 # installation directory configuration
-set(INST_PREFIX "/usr" CACHE PATH "Prefix prepended to install directories")
-set(CMAKE_INSTALL_PREFIX "${INST_PREFIX}" CACHE INTERNAL "Prefix prepended to install directories" FORCE)
-
-message(STATUS "To change installation directory use -DINST_PREFIX=path, for example, -DINST_PREFIX=/usr")
+set(LIB_SUFFIX "" CACHE STRING "Define suffix of directory name (32/64)")
+set(EXEC_INSTALL_PREFIX ${CMAKE_INSTALL_PREFIX} CACHE PATH "Installation prefix for executables and object code libraries" FORCE)
+set(BIN_INSTALL_DIR ${EXEC_INSTALL_PREFIX}/bin CACHE PATH "Installation prefix for user executables" FORCE)
+set(SBIN_INSTALL_DIR ${EXEC_INSTALL_PREFIX}/sbin CACHE PATH "Installation prefix for user executables" FORCE)
+set(LIB_INSTALL_DIR ${EXEC_INSTALL_PREFIX}/lib${LIB_SUFFIX} CACHE PATH  "Installation prefix for object code libraries" FORCE)
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_PREFIX}/include CACHE PATH "Installation prefix for C header files" FORCE)
+set(DATA_PREFIX "${CMAKE_INSTALL_PREFIX}/share" CACHE PATH "Prefix prepended to data install directories" FORCE)
 
 # don't USE -O3 with GCC, it causes less precise calculations
 if (CMAKE_COMPILER_IS_GNUCC)
@@ -71,5 +74,5 @@ add_executable( dt-key-forwarder-server ${SERVER_SOURCES} ${SERVER_HEADERS})
 target_link_libraries( dt-key-forwarder-server ${SERVER_LIBS} )
 
 # installation config
-install(TARGETS dt-key-forwarder-client RUNTIME DESTINATION ./bin)
-install(TARGETS dt-key-forwarder-server RUNTIME DESTINATION ./bin)
+install(TARGETS dt-key-forwarder-client RUNTIME DESTINATION ${BIN_INSTALL_DIR})
+install(TARGETS dt-key-forwarder-server RUNTIME DESTINATION ${BIN_INSTALL_DIR})
