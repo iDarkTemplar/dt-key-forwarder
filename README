@@ -1,0 +1,23 @@
+dt-key-forwarder is a client/server tool for forwarding multimedia keys to different X11 display.
+
+In order to use it, run server in the X11 session where you want to forward keys to,
+and run a client in the X11 session where you want to forward keys from.
+
+Server usage: dt-key-forwarder-server --socket /path/to/socket --lock /path/to/lock
+Client usage: dt-key-forwarder-client --server /path/to/socket
+
+Server socket is world writable, and there is no authentication mechanism,
+so it's up to user to ensure that only allowed users can access server socket
+using permissions on directory socket is in or any other approach
+
+Currently only following keys are allowed to be forwarded:
+	XF86XK_AudioPlay
+	XF86XK_AudioStop
+	XF86XK_AudioPause
+	XF86XK_AudioNext
+	XF86XK_AudioPrev
+	XF86XK_AudioRaiseVolume
+	XF86XK_AudioLowerVolume
+	XF86XK_AudioMute
+
+Interaction with rebinding of those keysyms on client or server isn't tested
