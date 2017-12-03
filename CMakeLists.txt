@@ -4,7 +4,7 @@ cmake_minimum_required( VERSION 2.8.8 )
 
 set(DKF_VERSION_MAJOR 0)
 set(DKF_VERSION_MINOR 2)
-set(DKF_VERSION_PATCH 1)
+set(DKF_VERSION_PATCH 2)
 set(DKF_VERSION "${DKF_VERSION_MAJOR}.${DKF_VERSION_MINOR}.${DKF_VERSION_PATCH}")
 
 set(CPACK_PACKAGE_VERSION_MAJOR ${DKF_VERSION_MAJOR})
@@ -65,7 +65,7 @@ set ( CLIENT_LIBS ${X11_X11_LIB} ${X11_Xinput_LIB} )
 
 set ( SERVER_SOURCES server/main.c )
 set ( SERVER_HEADERS common/commands.h )
-set ( SERVER_LIBS ${DT_CMD_LIBRARIES} ${X11_X11_LIB} ${X11_XTest_LIB})
+set ( SERVER_LIBS ${DTCOMMAND_LIBRARIES} ${X11_X11_LIB} ${X11_XTest_LIB})
 
 add_executable( dt-key-forwarder-client ${CLIENT_SOURCES} ${CLIENT_HEADERS})
 target_link_libraries( dt-key-forwarder-client ${CLIENT_LIBS} )
