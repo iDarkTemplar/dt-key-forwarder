@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2016 i.Dark_Templar <darktemplar@dark-templar-archives.net>
+ * Copyright (C) 2016-2018 i.Dark_Templar <darktemplar@dark-templar-archives.net>
  *
  * This file is part of DT Key Forwarder.
  *
- * DT Kernel Cleaner is free software: you can redistribute it and/or modify
+ * DT Key Forwarder is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
