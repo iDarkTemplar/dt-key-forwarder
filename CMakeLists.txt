@@ -51,21 +51,21 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 endif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 
 find_package ( DtCommand REQUIRED )
-find_package ( X11 COMPONENTS X11_Xinput X11_Xkblib X11_XTest REQUIRED )
+find_package ( X11 COMPONENTS Xi Xkb Xtst REQUIRED )
 
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR} )
 include_directories( ${DT_CMD_INCLUDE_DIRS} )
-include_directories( ${X11_Xinput_INCLUDE_PATH} ${X11_Xkblib_INCLUDE_PATH} ${X11_XTest_INCLUDE_PATH} )
+include_directories( ${X11_Xi_INCLUDE_PATH} ${X11_xkblib_INCLUDE_PATH} ${X11_Xtst_INCLUDE_PATH} )
 
 add_definitions(-D_FILE_OFFSET_BITS=64)
 
 set ( CLIENT_SOURCES client/main.c )
 set ( CLIENT_HEADERS common/commands.h )
-set ( CLIENT_LIBS ${X11_X11_LIB} ${X11_Xinput_LIB} )
+set ( CLIENT_LIBS ${X11_X11_LIB} ${X11_Xi_LIB} )
 
 set ( SERVER_SOURCES server/main.c )
 set ( SERVER_HEADERS common/commands.h )
-set ( SERVER_LIBS ${DTCOMMAND_LIBRARIES} ${X11_X11_LIB} ${X11_XTest_LIB})
+set ( SERVER_LIBS ${DTCOMMAND_LIBRARIES} ${X11_X11_LIB} ${X11_Xtst_LIB})
 
 add_executable( dt-key-forwarder-client ${CLIENT_SOURCES} ${CLIENT_HEADERS})
 target_link_libraries( dt-key-forwarder-client ${CLIENT_LIBS} )
