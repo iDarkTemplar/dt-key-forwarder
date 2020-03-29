@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 i.Dark_Templar <darktemplar@dark-templar-archives.net>
+ * Copyright (C) 2016-2020 i.Dark_Templar <darktemplar@dark-templar-archives.net>
  *
  * This file is part of DT Key Forwarder.
  *
@@ -22,8 +22,6 @@
 #define _WITH_DPRINTF
 #endif /* (defined OS_FreeBSD) */
 
-#include "common/commands.h"
-
 #include <X11/Xlib.h>
 #include <X11/XF86keysym.h>
 #include <X11/extensions/XInput.h>
@@ -36,8 +34,13 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <poll.h>
+#include <string.h>
 
 #include <stdio.h>
+
+#define KEYDATA_HAS_LENGTH
+
+#include "common/commands.h"
 
 static volatile int run = 1;
 
@@ -177,6 +180,8 @@ int main(int argc, char **argv)
 			result = -1;
 			goto error_1;
 		}
+
+		grab_keys[i].string_length = strlen(grab_keys[i].string);
 	}
 
 	dpy = XOpenDisplay(getenv("DISPLAY"));
@@ -260,9 +265,12 @@ int main(int argc, char **argv)
 						}
 					}
 
-					if (i < sizeof(grab_keys)/sizeof(grab_keys[0]))
+					if ((i < sizeof(grab_keys)/sizeof(grab_keys[0])) && (grab_keys[i].string_length > 0))
 					{
-						dprintf(socket_fd, "%s(\"%s\")\n", (cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release , grab_keys[i].string);
+						dprintf(socket_fd, "%s(%zu %s)\n",
+							(cookie->evtype == XI_KeyPress) ? dtkey_command_key_press : dtkey_command_key_release,
+							grab_keys[i].string_length,
+							grab_keys[i].string);
 					}
 					break;
 

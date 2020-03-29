@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 i.Dark_Templar <darktemplar@dark-templar-archives.net>
+ * Copyright (C) 2016-2020 i.Dark_Templar <darktemplar@dark-templar-archives.net>
  *
  * This file is part of DT Key Forwarder.
  *
@@ -24,6 +24,10 @@
 #include <X11/Xlib.h>
 #include <X11/XF86keysym.h>
 
+#ifdef KEYDATA_HAS_LENGTH
+#include <stddef.h>
+#endif /* KEYDATA_HAS_LENGTH */
+
 #define dtkey_command_max_length 4096
 
 #define dtkey_command_key_press "key_press"
@@ -33,17 +37,26 @@ typedef struct KeyData
 {
 	KeySym keysym;
 	char *string;
+#ifdef KEYDATA_HAS_LENGTH
+	size_t string_length;
+#endif /* KEYDATA_HAS_LENGTH */
 } KeyData_t;
 
+#ifdef KEYDATA_HAS_LENGTH
+#define KEYDATA_TAIL_INIT , 0
+#else /* KEYDATA_HAS_LENGTH */
+#define KEYDATA_TAIL_INIT
+#endif /* KEYDATA_HAS_LENGTH */
+
 static KeyData_t grab_keys[] = {
-	{ XF86XK_AudioPlay, NULL },
-	{ XF86XK_AudioStop, NULL },
-	{ XF86XK_AudioPause, NULL },
-	{ XF86XK_AudioNext, NULL },
-	{ XF86XK_AudioPrev, NULL },
-	{ XF86XK_AudioRaiseVolume, NULL },
-	{ XF86XK_AudioLowerVolume, NULL },
-	{ XF86XK_AudioMute, NULL },
+	{ XF86XK_AudioPlay, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioStop, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioPause, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioNext, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioPrev, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioRaiseVolume, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioLowerVolume, NULL KEYDATA_TAIL_INIT },
+	{ XF86XK_AudioMute, NULL KEYDATA_TAIL_INIT },
 };
 
 #endif /* DTKEY_COMMANDS_H */
