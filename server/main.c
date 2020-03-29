@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2018 i.Dark_Templar <darktemplar@dark-templar-archives.net>
+ * Copyright (C) 2016-2020 i.Dark_Templar <darktemplar@dark-templar-archives.net>
  *
  * This file is part of DT Key Forwarder.
  *
@@ -18,10 +18,6 @@
  *
  */
 
-#include "common/commands.h"
-
-#include <dt-command.h>
-
 #include <X11/Xlib.h>
 #include <X11/keysym.h>
 #include <X11/XF86keysym.h>
@@ -32,12 +28,17 @@
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/file.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <poll.h>
 #include <errno.h>
 
 #include <stdio.h>
+
+#include <dt-command.h>
+
+#include "common/commands.h"
 
 static volatile int run = 1;
 
@@ -82,31 +83,6 @@ static void print_help(FILE *stream, const char *name)
 	"\t--lock [-l] -- path to create and hold lock at\n"
 	"\t--help [-h] -- show this help message\n",
 	name);
-}
-
-static void check_lock_file(const char *lockfile)
-{
-	FILE *lockpidfile;
-	int lockpid;
-
-	lockpidfile = fopen(lockfile, "r");
-	if (lockpidfile != NULL)
-	{
-		if (fscanf(lockpidfile, "%10d\n", &lockpid) == 1)
-		{
-			if (kill(lockpid, 0) == -1)
-			{
-				fclose(lockpidfile);
-				lockpidfile = NULL;
-				unlink(lockfile);
-			}
-		}
-
-		if (lockpidfile != NULL)
-		{
-			fclose(lockpidfile);
-		}
-	}
 }
 
 struct client
@@ -377,14 +353,20 @@ int main(int argc, char **argv)
 	memset(sockaddr.sun_path, 0, sizeof(sockaddr.sun_path));
 	strncat(sockaddr.sun_path, server_socket_path, sizeof(sockaddr.sun_path) - 1);
 
-	check_lock_file(lock_path);
-
-	lockfd = open(lock_path, O_WRONLY | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+	lockfd = open(lock_path, O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 	if (lockfd == -1)
 	{
 		fprintf(stderr, "Error obtaining lock file\n");
 		result = -1;
 		goto error_3;
+	}
+
+	rc = flock(lockfd, LOCK_EX | LOCK_NB);
+	if (rc < 0)
+	{
+		fprintf(stderr, "Error locking lock file\n");
+		result = -1;
+		goto error_4;
 	}
 
 	unlink(sockaddr.sun_path);
@@ -595,16 +577,16 @@ error_6:
 	free(pollfds);
 
 error_5:
-	close(socket_fd);
 	unlink(sockaddr.sun_path);
+	close(socket_fd);
 
-	close(lockfd);
 	unlink(lock_path);
+	close(lockfd);
 	goto error_2;
 
 error_4:
-	close(lockfd);
 	unlink(lock_path);
+	close(lockfd);
 
 error_3:
 	close(socket_fd);
